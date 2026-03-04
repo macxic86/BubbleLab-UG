@@ -831,7 +831,7 @@ elif etapa == "6. Resultados":
 st.markdown("---")
 st.subheader("📚 Cómo citar este software")
 
-doi_link = "https://doi.org/10.XXXX/XXXXX"  # ← Ponga aquí su DOI real
+doi_link = "https://doi.org/10.5281/zenodo.18807427"  # ← Ponga aquí su DOI real
 
 citation_text = f"""
 **BubbleLab-UG-UCOL – Análisis de Tamaño de Burbujas (Versión 1.0)**  
@@ -859,6 +859,7 @@ st.markdown(
     unsafe_allow_html=True
 
 )
+
 
 
 
