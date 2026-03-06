@@ -902,7 +902,68 @@ DOI: [{doi_link}]({doi_link})
 st.markdown(citation_text)
 
 st.info("Si utiliza este software en trabajos académicos, favor de citarlo usando el DOI anterior. If you use this software in academic publications, please cite it using the DOI above.")
+# ===============================
+# RECURSOS DEL SOFTWARE
+# ===============================
 
+st.markdown("---")
+st.subheader("📦 BubbleLab Resources")
+
+st.markdown("""
+Welcome to **BubbleLab-UG-UCOL – Bubble Size Analysis Software**.
+
+Below you can find documentation, example data, and links related to the software.
+""")
+
+# -------- MANUALES --------
+st.markdown("### 📚 User Manuals")
+
+st.markdown("""
+🇬🇧 **English Manual**  
+[Download User Manual (English)](https://raw.github.com/macxic86/BubbleLab-UG-UCOL/blob/main/BubbleLab_User_Manual_EN.pdf)
+
+🇪🇸 **Manual en Español**  
+[Descargar Manual de Usuario (Español)](https://raw.github.com/macxic86/BubbleLab-UG-UCOL/blob/main/BubbleLab_User_Manual_ES.pdf)
+""")
+
+# -------- DATOS DE EJEMPLO --------
+st.markdown("### 🖼 Example Images")
+
+st.markdown("""
+Download sample images to test the workflow of the software.
+
+[Download Example Dataset](https://raw.github.com/macxic86/BubbleLab-UG-UCOL/blob/main/sample%20images.rar)
+""")
+
+# -------- GITHUB --------
+st.markdown("### 💻 Source Code")
+
+st.markdown("""
+The source code of BubbleLab-UG-UCOL is available on GitHub.
+
+🔗 https://github.com/macic86/BubbleLab-UG-UCOL
+""")
+
+# -------- DOI --------
+st.markdown("### 📄 Software DOI")
+
+st.markdown("""
+This software is archived with DOI:
+
+https://doi.org/10.5281/zenodo.18807427
+""")
+
+# -------- CITA --------
+st.markdown("### 📑 Citation")
+
+st.code("""
+Corona Arroyo, M.A., & Ibarra Galvan, V. (2025).
+BubbleLab-UG-UCOL: Bubble Size Analysis Software (Version 1.0).
+University of Guanajuato – University of Colima.
+https://doi.org/10.5281/zenodo.18807427
+""")
+
+st.info("If you use this software in academic work, please cite it using the DOI above.")
 # ===============================
 # FOOTER INSTITUCIONAL
 # ===============================
@@ -917,6 +978,7 @@ st.markdown(
     unsafe_allow_html=True
 
 )
+
 
 
 
