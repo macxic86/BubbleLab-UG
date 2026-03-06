@@ -882,26 +882,7 @@ elif etapa == "6. Resultados":
                             "d32": float(d32)
                         }
                    )
-# ===============================
-# CÓMO CITAR ESTE SOFTWARE, CITATION
-# ===============================
 
-st.markdown("---")
-st.subheader("📚 Cómo citar este software, Citation")
-
-doi_link = "https://doi.org/10.5281/zenodo.18807427"  # ← Ponga aquí su DOI real
-
-citation_text = f"""
-**BubbleLab-UG-UCOL – Análisis de Tamaño de Burbujas (Versión 1.0)**  
-Dr. Mario Alberto Corona Arroyo & Dr. Valentín Ibarra Galvan  
-Universidad de Guanajuato – Universidad de Colima  
-
-DOI: [{doi_link}]({doi_link})
-"""
-
-st.markdown(citation_text)
-
-st.info("Si utiliza este software en trabajos académicos, favor de citarlo usando el DOI anterior. If you use this software in academic publications, please cite it using the DOI above.")
 # ===============================
 # RECURSOS DEL SOFTWARE
 # ===============================
@@ -941,7 +922,7 @@ st.markdown("### 💻 Source Code")
 st.markdown("""
 The source code of BubbleLab-UG-UCOL is available on GitHub.
 
-🔗 https://github.com/macic86/BubbleLab-UG-UCOL
+🔗 https://github.com/macxic86/BubbleLab-UG-UCOL
 """)
 
 # -------- DOI --------
@@ -978,6 +959,7 @@ st.markdown(
     unsafe_allow_html=True
 
 )
+
 
 
 
