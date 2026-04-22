@@ -7,27 +7,50 @@ from PIL import Image
 from skimage.feature import peak_local_max
 from skimage.morphology import h_maxima
 from scipy import ndimage as ndi
+import os
+import uuid
+import datetime
+import pandas as pd
+from io import BytesIO
+from posthog import Posthog
+
+# ===============================
+# CONFIGURACIÓN GENERAL
+# ===============================
+
+SOFTWARE_NAME = "BubbleLab-UG"
+SOFTWARE_VERSION = "1.0"
+INSTITUTION_NAME = "Universidad de Guanajuato"
+DEPARTMENT_NAME = "Departamento de Ingeniería en Minas, Metalurgia y Geología"
+AUTHORS_FOOTER = "Dr. Mario Alberto Corona Arroyo y Dr. Valentín Ibarra Galvan"
+CITATION_AUTHORS = "Corona Arroyo, M.A., & Ibarra Galvan, V."
+DOI_URL = "https://doi.org/10.5281/zenodo.18807427"
+GITHUB_REPO_URL = "https://github.com/macxic86/BubbleLab-UG"
+
+MANUAL_EN_URL = f"{GITHUB_REPO_URL}/blob/main/BubbleLab_User_Manual_EN.pdf"
+MANUAL_ES_URL = f"{GITHUB_REPO_URL}/blob/main/BubbleLab_User_Manual_ES.pdf"
+DATASET_URL = f"{GITHUB_REPO_URL}/blob/main/sample%20images.rar"
+
+st.set_page_config(
+    page_title=SOFTWARE_NAME,
+    layout="wide"
+)
+
 # ===============================
 # FUNCIÓN PARA ESCALAR IMÁGENES GRANDES
 # ===============================
 
 def resize_for_canvas(image, max_width=900):
-
     h, w = image.shape[:2]
-
     scale = min(1.0, max_width / w)
-
     new_w = int(w * scale)
     new_h = int(h * scale)
-
     resized = cv2.resize(image, (new_w, new_h))
-
     return resized, scale
 
-# === POSTHOG METRICS ===
-import os
-import uuid
-from posthog import Posthog
+# ===============================
+# POSTHOG METRICS
+# ===============================
 
 POSTHOG_API_KEY = os.getenv("POSTHOG_API_KEY")
 
@@ -36,20 +59,19 @@ if POSTHOG_API_KEY:
 else:
     posthog = None
 
-# Crear ID único por sesión
 if "user_id" not in st.session_state:
     st.session_state.user_id = str(uuid.uuid4())
 
-# Evento: App abierta
 if posthog:
-    posthog.capture(distinct_id=st.session_state.user_id,
+    posthog.capture(
+        distinct_id=st.session_state.user_id,
         event="app_opened",
-        properties={})
+        properties={}
+    )
+
 # ===============================
 # HEADER PROFESIONAL INSTITUCIONAL
 # ===============================
-
-import datetime
 
 st.markdown(
     """
@@ -65,50 +87,47 @@ st.markdown(
         font-weight: bold;
         text-align: center;
         color: #003366;
+        line-height: 1.25;
     }
     .subtitle {
         text-align: center;
         font-size: 18px;
+        line-height: 1.5;
     }
     .footer {
         text-align: center;
         font-size: 14px;
         color: gray;
         margin-top: 50px;
+        margin-bottom: 20px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-col1, col2, col3 = st.columns([1, 3, 1])
+col1, col2 = st.columns([1, 4])
 
 with col1:
     st.image("ug.png", width=160)
 
 with col2:
     st.markdown(
-        """
+        f"""
         <div class="main-header">
             <div class="title-software">
-                ANÁLISIS DE TAMAÑO DE BURBUJAS- BUBBLE SIZE MEASUREMENT AND ANALYSIS
+                ANÁLISIS DE TAMAÑO DE BURBUJAS - BUBBLE SIZE MEASUREMENT AND ANALYSIS
             </div>
             <div class="subtitle">
-                Universidad de Guanajuato<br>
-                Departamento de Ingeniería en Minas, Metalurgia y Geología
+                {INSTITUTION_NAME}<br>
+                {DEPARTMENT_NAME}
                 <br><br>
-                Universidad de Colima<br>
-                Facultad de Ciencias Químicas
-                <br><br>
-                Versión 1.0
+                Versión {SOFTWARE_VERSION}
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-
-with col3:
-    st.image("ucol.png", width=160)
 
 st.markdown("---")
 
@@ -118,13 +137,16 @@ st.markdown("---")
 
 etapa = st.sidebar.radio(
     "Seleccione etapa:",
-    ["1. Calibración",
-     "2. ROI",
-     "3. Ajustes",
-     "4. Previsualización",
-     "5. Batch",
-     "6. Resultados"]
+    [
+        "1. Calibración",
+        "2. ROI",
+        "3. Ajustes",
+        "4. Previsualización",
+        "5. Batch",
+        "6. Resultados"
+    ]
 )
+
 # ===============================
 # ETAPA 1 – CALIBRACIÓN
 # ===============================
@@ -139,7 +161,6 @@ if etapa == "1. Calibración":
 
     if uploaded_files:
 
-        # Evento: imágenes cargadas
         if posthog:
             posthog.capture(
                 distinct_id=st.session_state.user_id,
@@ -159,28 +180,17 @@ if etapa == "1. Calibración":
 
         st.write(f"{len(images)} imágenes cargadas")
 
-        # ===============================
-        # ESCALAR IMAGEN PARA CANVAS
-        # ===============================
-
         display_image, scale = resize_for_canvas(image_np)
-
         st.session_state.canvas_scale = scale
 
         import io
-        from PIL import Image
 
         pil_image = Image.fromarray(display_image).convert("RGB")
 
-        # Convertir a PNG en memoria
         buffer = io.BytesIO()
         pil_image.save(buffer, format="PNG")
         buffer.seek(0)
         pil_image_fixed = Image.open(buffer)
-
-        # ===============================
-        # CANVAS
-        # ===============================
 
         canvas_result = st_canvas(
             fill_color="rgba(0, 0, 0, 0)",
@@ -200,21 +210,15 @@ if etapa == "1. Calibración":
         )
 
         if canvas_result.json_data is not None:
-
             objects = canvas_result.json_data["objects"]
 
             if len(objects) > 0:
-
                 line = objects[0]
 
                 x1 = line["x1"]
                 y1 = line["y1"]
                 x2 = line["x2"]
                 y2 = line["y2"]
-
-                # ===============================
-                # CORREGIR ESCALA
-                # ===============================
 
                 scale = st.session_state.canvas_scale
 
@@ -223,14 +227,13 @@ if etapa == "1. Calibración":
                 ) / scale
 
                 if known_distance > 0 and pixel_distance > 0:
-
                     mm_per_pixel = known_distance / pixel_distance
-
                     st.session_state.mm_per_pixel = mm_per_pixel
 
                     st.success(
                         f"Calibración: {mm_per_pixel:.6f} mm/pixel"
                     )
+
 # ===============================
 # ETAPA 2 – ROI
 # ===============================
@@ -240,31 +243,19 @@ elif etapa == "2. ROI":
     if "original" not in st.session_state:
         st.warning("Primero cargue imagen en calibración.")
     else:
-
         import io
-        from PIL import Image
 
         image_np = st.session_state.original
 
-        # ===============================
-        # ESCALAR IMAGEN PARA CANVAS
-        # ===============================
-
         display_image, scale = resize_for_canvas(image_np)
-
         st.session_state.canvas_scale = scale
 
         pil_image = Image.fromarray(display_image).convert("RGB")
 
-        # Convertir a PNG en memoria (necesario para Streamlit Cloud)
         buffer = io.BytesIO()
         pil_image.save(buffer, format="PNG")
         buffer.seek(0)
         pil_image_fixed = Image.open(buffer)
-
-        # ===============================
-        # CANVAS ROI
-        # ===============================
 
         canvas_result = st_canvas(
             fill_color="rgba(0, 255, 0, 0.3)",
@@ -279,33 +270,24 @@ elif etapa == "2. ROI":
         )
 
         if canvas_result.json_data is not None:
-
             objects = canvas_result.json_data["objects"]
 
             if len(objects) > 0:
-
                 rect = objects[0]
-
                 scale = st.session_state.canvas_scale
-
-                # ===============================
-                # CORREGIR ESCALA DE COORDENADAS
-                # ===============================
 
                 x = int(rect["left"] / scale)
                 y = int(rect["top"] / scale)
                 w = int(rect["width"] / scale)
                 h = int(rect["height"] / scale)
 
-                roi = image_np[y:y+h, x:x+w]
+                roi = image_np[y:y + h, x:x + w]
 
-                # Guardar ROI
                 st.session_state.roi = roi
-
-                # Guardar coordenadas para batch
-                st.session_state.roi_coords = (x, y, x+w, y+h)
+                st.session_state.roi_coords = (x, y, x + w, y + h)
 
                 st.image(roi, caption="ROI seleccionada")
+
 # ===============================
 # ETAPA 3 - AJUSTES
 # ===============================
@@ -315,27 +297,15 @@ elif etapa == "3. Ajustes":
     if "roi" not in st.session_state:
         st.warning("Primero defina ROI.")
     else:
-
         roi = st.session_state.roi
 
         st.subheader("Ajustes de preprocesamiento")
 
-        # 🔹 CLAHE
         clip_limit = st.slider("CLAHE Clip Limit", 1.0, 5.0, 3.0, 0.1)
         tile_size = st.slider("CLAHE Tile Grid Size", 4, 16, 8, 1)
-
-        # 🔹 Threshold fijo (coherente con batch)
         thresh_val = st.slider("Umbral binarización", 0, 255, 120)
-
-        # 🔹 Fill Holes
         use_fill = st.checkbox("Aplicar Fill Holes", value=True)
-
-        # 🔹 Closing
         closing_iter = st.slider("Iteraciones Morph Close", 0, 5, 1)
-
-        # =============================
-        # 🔹 Guardar parámetros en session_state
-        # =============================
 
         st.session_state.clip_limit = clip_limit
         st.session_state.tile_size = tile_size
@@ -343,11 +313,6 @@ elif etapa == "3. Ajustes":
         st.session_state.use_fill = use_fill
         st.session_state.closing_iter = closing_iter
 
-        # =============================
-        # 🔹 PROCESAMIENTO
-        # =============================
-
-        # CLAHE
         lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
 
@@ -361,10 +326,8 @@ elif etapa == "3. Ajustes":
         limg = cv2.merge((cl, a, b))
         enhanced = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
-        # Escala de grises
         gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
 
-        # Threshold fijo
         _, binary = cv2.threshold(
             gray,
             thresh_val,
@@ -372,12 +335,10 @@ elif etapa == "3. Ajustes":
             cv2.THRESH_BINARY_INV
         )
 
-        # Fill holes
         if use_fill:
             binary = ndi.binary_fill_holes(binary)
             binary = binary.astype(np.uint8) * 255
 
-        # Closing
         if closing_iter > 0:
             kernel = np.ones((3, 3), np.uint8)
             binary = cv2.morphologyEx(
@@ -387,19 +348,15 @@ elif etapa == "3. Ajustes":
                 iterations=closing_iter
             )
 
-        # =============================
-        # 🔹 Guardar resultados finales
-        # =============================
-
         st.session_state.adjusted = enhanced
         st.session_state.binary = binary
 
-        # Mostrar resultados
         col1, col2 = st.columns(2)
         col1.image(enhanced, channels="BGR", caption="Imagen mejorada")
         col2.image(binary, channels="GRAY", caption="Binaria sólida")
 
         st.success("Ajustes actualizados dinámicamente.")
+
 # ===============================
 # ETAPA 4 - PREVISUALIZACIÓN
 # ===============================
@@ -409,11 +366,8 @@ elif etapa == "4. Previsualización":
     if "binary" not in st.session_state:
         st.warning("Primero realice los ajustes.")
     else:
-
         from skimage.segmentation import watershed
         from skimage.measure import label
-        from skimage.morphology import h_maxima
-        from skimage.feature import peak_local_max
 
         binary = st.session_state.binary.copy()
         original = st.session_state.roi.copy()
@@ -439,7 +393,6 @@ elif etapa == "4. Previsualización":
         st.session_state.peak_factor = peak_factor
 
         if st.button("Previsualizar segmentación"):
-            # Evento: análisis ejecutado
             if posthog:
                 posthog.capture(
                     distinct_id=st.session_state.user_id,
@@ -451,23 +404,12 @@ elif etapa == "4. Previsualización":
                         "peak_factor": peak_factor
                     }
                 )
-            # =============================
-            # 🔹 DISTANCE TRANSFORM ROBUSTO
-            # =============================
 
             dist = cv2.distanceTransform(binary, cv2.DIST_L2, 5)
             dist_smooth = cv2.GaussianBlur(dist, (5, 5), 0)
 
-            # =============================
-            # 🔹 H-MAXIMA
-            # =============================
-
             h_value = peak_factor * dist_smooth.max()
             hmax = h_maxima(dist_smooth, h_value)
-
-            # =============================
-            # 🔹 PEAK LOCAL MAX
-            # =============================
 
             coordinates = peak_local_max(
                 dist_smooth,
@@ -482,10 +424,6 @@ elif etapa == "4. Previsualización":
                 markers[coord[0], coord[1]] = i + 1
 
             markers = label(hmax | (markers > 0))
-
-            # =============================
-            # 🔹 WATERSHED
-            # =============================
 
             labels = watershed(
                 -dist_smooth,
@@ -511,7 +449,6 @@ elif etapa == "4. Previsualización":
                 )
 
                 for c in cnts:
-
                     area = cv2.contourArea(c)
                     if area < area_min or area > area_max:
                         continue
@@ -520,7 +457,7 @@ elif etapa == "4. Previsualización":
                     if perimeter == 0:
                         continue
 
-                    circularity = 4 * np.pi * area / (perimeter**2)
+                    circularity = 4 * np.pi * area / (perimeter ** 2)
                     if circularity < circularidad_min:
                         continue
 
@@ -543,6 +480,7 @@ elif etapa == "4. Previsualización":
             )
 
             st.session_state.preview_diameters = diameters
+
 # ===============================
 # ETAPA 5 - BATCH
 # ===============================
@@ -554,11 +492,8 @@ elif etapa == "5. Batch":
     elif "area_min" not in st.session_state:
         st.warning("Primero ejecute la Previsualización.")
     else:
-
         from skimage.segmentation import watershed
         from skimage.measure import label
-        from skimage.morphology import h_maxima
-        from skimage.feature import peak_local_max
 
         if st.button("Procesar todas las imágenes"):
 
@@ -569,10 +504,6 @@ elif etapa == "5. Batch":
 
                 x1, y1, x2, y2 = st.session_state.roi_coords
                 roi = img[y1:y2, x1:x2]
-
-                # =============================
-                # 🔹 PREPROCESAMIENTO
-                # =============================
 
                 lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
                 l, a, b = cv2.split(lab)
@@ -603,7 +534,7 @@ elif etapa == "5. Batch":
                     binary_batch = binary_batch.astype(np.uint8) * 255
 
                 if st.session_state.closing_iter > 0:
-                    kernel = np.ones((3,3), np.uint8)
+                    kernel = np.ones((3, 3), np.uint8)
                     binary_batch = cv2.morphologyEx(
                         binary_batch,
                         cv2.MORPH_CLOSE,
@@ -611,27 +542,11 @@ elif etapa == "5. Batch":
                         iterations=st.session_state.closing_iter
                     )
 
-                # =============================
-                # 🔹 DISTANCE TRANSFORM ROBUSTO
-                # =============================
-
                 dist = cv2.distanceTransform(binary_batch, cv2.DIST_L2, 5)
                 dist_smooth = cv2.GaussianBlur(dist, (5, 5), 0)
 
-                # =============================
-                # 🔹 H-MAXIMA
-                # =============================
-
-                h_value = (
-                    st.session_state.peak_factor *
-                    dist_smooth.max()
-                )
-
+                h_value = st.session_state.peak_factor * dist_smooth.max()
                 hmax = h_maxima(dist_smooth, h_value)
-
-                # =============================
-                # 🔹 PEAK LOCAL MAX
-                # =============================
 
                 coordinates = peak_local_max(
                     dist_smooth,
@@ -647,10 +562,6 @@ elif etapa == "5. Batch":
 
                 markers = label(hmax | (markers > 0))
 
-                # =============================
-                # 🔹 WATERSHED
-                # =============================
-
                 labels = watershed(
                     -dist_smooth,
                     markers,
@@ -665,11 +576,7 @@ elif etapa == "5. Batch":
                     if region_label == 0:
                         continue
 
-                    mask_obj = np.zeros(
-                        binary_batch.shape,
-                        dtype=np.uint8
-                    )
-
+                    mask_obj = np.zeros(binary_batch.shape, dtype=np.uint8)
                     mask_obj[labels == region_label] = 255
 
                     cnts, _ = cv2.findContours(
@@ -679,11 +586,9 @@ elif etapa == "5. Batch":
                     )
 
                     for c in cnts:
-
                         area = cv2.contourArea(c)
 
-                        if area < st.session_state.area_min or \
-                           area > st.session_state.area_max:
+                        if area < st.session_state.area_min or area > st.session_state.area_max:
                             continue
 
                         perimeter = cv2.arcLength(c, True)
@@ -691,13 +596,9 @@ elif etapa == "5. Batch":
                         if perimeter == 0:
                             continue
 
-                        circularity = (
-                            4 * np.pi * area /
-                            (perimeter**2)
-                        )
+                        circularity = 4 * np.pi * area / (perimeter ** 2)
 
-                        if circularity < \
-                           st.session_state.circularidad_min:
+                        if circularity < st.session_state.circularidad_min:
                             continue
 
                         (x, y), radius = cv2.minEnclosingCircle(c)
@@ -719,12 +620,10 @@ elif etapa == "5. Batch":
             st.session_state.diameters = all_diameters
 
             st.success(
-                f"Batch completado. "
-                f"{len(all_diameters)} burbujas detectadas."
+                f"Batch completado. {len(all_diameters)} burbujas detectadas."
             )
 
         if "batch_results" in st.session_state:
-
             idx = st.slider(
                 "Ver imagen",
                 0,
@@ -741,71 +640,55 @@ elif etapa == "5. Batch":
                 f"Burbujas detectadas: "
                 f"{len(st.session_state.batch_results[idx][1])}"
             )
+
 # ===============================
 # ETAPA 6 - RESULTADOS
 # ===============================
 
 elif etapa == "6. Resultados":
 
-    import pandas as pd
-    from io import BytesIO
-
     if "diameters" not in st.session_state:
         st.warning("Primero ejecute el batch.")
     else:
-
         diameters = np.array(st.session_state.diameters)
 
         if len(diameters) == 0:
             st.warning("No hay burbujas detectadas.")
         else:
 
-            # 🔹 Conversión a mm
             if "mm_per_pixel" in st.session_state:
                 diameters = diameters * st.session_state.mm_per_pixel
 
-            # =============================
-            # 🔹 TABLA BASE D32
-            # =============================
-
             df_base = pd.DataFrame({
                 "Diametro_mm": diameters,
-                "Diametro^2": diameters**2,
-                "Diametro^3": diameters**3
+                "Diametro^2": diameters ** 2,
+                "Diametro^3": diameters ** 3
             })
 
             sum_d2 = df_base["Diametro^2"].sum()
             sum_d3 = df_base["Diametro^3"].sum()
 
             d32 = sum_d3 / sum_d2
-
             d10 = np.percentile(diameters, 10)
             d50 = np.percentile(diameters, 50)
             d90 = np.percentile(diameters, 90)
 
             st.subheader("Estadísticos")
-
             st.write(f"D10: {d10:.4f} mm")
             st.write(f"D50: {d50:.4f} mm")
             st.write(f"D90: {d90:.4f} mm")
             st.write(f"D32: {d32:.4f} mm")
 
-            # =============================
-            # 🔹 HISTOGRAMA
-            # =============================
-
             counts, bins = np.histogram(diameters, bins=20)
             counts_percent = counts / counts.sum() * 100
 
             fig1, ax1 = plt.subplots()
-
             ax1.bar(
                 bins[:-1],
                 counts_percent,
                 width=np.diff(bins),
                 align="edge"
             )
-
             ax1.set_xlabel("Tamaño de burbuja (mm)")
             ax1.set_ylabel("Frecuencia (%)")
             ax1.set_title("Distribución de tamaño")
@@ -817,16 +700,11 @@ elif etapa == "6. Resultados":
                 "Frecuencia_%": counts_percent
             })
 
-            # =============================
-            # 🔹 CURVA ACUMULADA
-            # =============================
-
             sorted_d = np.sort(diameters)
-            cumulative = np.arange(1, len(sorted_d)+1) / len(sorted_d) * 100
+            cumulative = np.arange(1, len(sorted_d) + 1) / len(sorted_d) * 100
 
             fig2, ax2 = plt.subplots()
             ax2.plot(sorted_d, cumulative)
-
             ax2.set_xlabel("Tamaño de burbuja (mm)")
             ax2.set_ylabel("Acumulado pasante (%)")
             ax2.set_title("Curva acumulada")
@@ -838,18 +716,10 @@ elif etapa == "6. Resultados":
                 "Acumulado_%": cumulative
             })
 
-            # =============================
-            # 🔹 RESUMEN
-            # =============================
-
             summary_df = pd.DataFrame({
                 "Parametro": ["D10", "D50", "D90", "D32", "Sum_d2", "Sum_d3"],
                 "Valor": [d10, d50, d90, d32, sum_d2, sum_d3]
             })
-
-            # =============================
-            # 🔹 EXPORTACIÓN A EXCEL
-            # =============================
 
             output = BytesIO()
 
@@ -868,7 +738,6 @@ elif etapa == "6. Resultados":
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-            # Evento: descarga de Excel
             if download_clicked:
                 if posthog:
                     posthog.capture(
@@ -881,7 +750,7 @@ elif etapa == "6. Resultados":
                             "d90": float(d90),
                             "d32": float(d32)
                         }
-                   )
+                    )
 
 # ===============================
 # RECURSOS DEL SOFTWARE
@@ -890,61 +759,52 @@ elif etapa == "6. Resultados":
 st.markdown("---")
 st.subheader("📦 BubbleLab Resources")
 
-st.markdown("""
-Welcome to **BubbleLab-UG-UCOL – Bubble Size Analysis Software**.
+st.markdown(f"""
+Welcome to **{SOFTWARE_NAME} – Bubble Size Analysis Software**.
 
 Below you can find documentation, example data, and links related to the software.
 """)
 
-# -------- MANUALES --------
 st.markdown("### 📚 User Manuals")
-
-st.markdown("""
+st.markdown(f"""
 🇬🇧 **English Manual**  
-[Download User Manual (English)](https://github.com/macxic86/BubbleLab-UG-UCOL/blob/main/BubbleLab_User_Manual_EN.pdf)
+[Download User Manual (English)]({MANUAL_EN_URL})
 
 🇪🇸 **Manual en Español**  
-[Descargar Manual de Usuario (Español)](https://github.com/macxic86/BubbleLab-UG-UCOL/blob/main/BubbleLab_User_Manual_ES.pdf)
+[Descargar Manual de Usuario (Español)]({MANUAL_ES_URL})
 """)
 
-# -------- DATOS DE EJEMPLO --------
 st.markdown("### 🖼 Example Images")
-
-st.markdown("""
+st.markdown(f"""
 Download sample images to test the workflow of the software.
 
-[Download Example Dataset](https://github.com/macxic86/BubbleLab-UG-UCOL/blob/main/sample%20images.rar)
+[Download Example Dataset]({DATASET_URL})
 """)
 
-# -------- GITHUB --------
 st.markdown("### 💻 Source Code")
+st.markdown(f"""
+The source code of {SOFTWARE_NAME} is available on GitHub.
 
-st.markdown("""
-The source code of BubbleLab-UG-UCOL is available on GitHub.
-
-🔗 https://github.com/macxic86/BubbleLab-UG-UCOL
+🔗 {GITHUB_REPO_URL}
 """)
 
-# -------- DOI --------
 st.markdown("### 📄 Software DOI")
-
-st.markdown("""
+st.markdown(f"""
 This software is archived with DOI:
 
-https://doi.org/10.5281/zenodo.18807427
+{DOI_URL}
 """)
 
-# -------- CITA --------
 st.markdown("### 📑 Citation")
-
-st.code("""
-Corona Arroyo, M.A., & Ibarra Galvan, V. (2025).
-BubbleLab-UG-UCOL: Bubble Size Analysis Software (Version 1.0).
-University of Guanajuato – University of Colima.
-https://doi.org/10.5281/zenodo.18807427
+st.code(f"""
+{CITATION_AUTHORS} (2025).
+{SOFTWARE_NAME}: Bubble Size Analysis Software (Version {SOFTWARE_VERSION}).
+{INSTITUTION_NAME}.
+{DOI_URL}
 """)
 
 st.info("If you use this software in academic work, please cite it using the DOI above.")
+
 # ===============================
 # FOOTER INSTITUCIONAL
 # ===============================
@@ -952,38 +812,9 @@ st.info("If you use this software in academic work, please cite it using the DOI
 st.markdown(
     f"""
     <div class="footer">
-        Desarrollado por Dr. Mario Alberto Corona Arroyo y Dr. Valentín Ibarra Galvan<br>
-        © {datetime.datetime.now().year} Universidad de Guanajuato – Universidad de Colima
+        Desarrollado por {AUTHORS_FOOTER}<br>
+        © {datetime.datetime.now().year} {INSTITUTION_NAME}
     </div>
     """,
     unsafe_allow_html=True
-
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
