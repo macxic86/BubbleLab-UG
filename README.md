@@ -1,4 +1,4 @@
-# BubbleLab-UG-UCOL
+# BubbleLab-UG
 
 
 Aplicación académica para la medición de distribución de tamaño de burbuja y diámetro medio de Sauter (D32) mediante análisis digital de imágenes. 
@@ -8,4 +8,4 @@ Academic application for bubble size distribution and Sauter mean diameter (D32)
 
 
 
-Developed by Universidad de Guanajuato and Universidad de Colima
+Developed by Universidad de Guanajuato.
